@@ -1,8 +1,10 @@
 import { getTicketById } from "@/actions/ticket.actions";
 import { logEvent } from "@/utils/sentry";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getPriorityClass } from "@/utils/ui";
+import CloseTicketButton from "@/components/CloseTicketButton";
+import { getCurrentUser } from "@/lib/current-user";
 
 
 const TicketDetailsPage = async (props: {
@@ -10,13 +12,19 @@ const TicketDetailsPage = async (props: {
 }) => {
     const { id } = await props.params;
     const ticket = await getTicketById(id);
+    const currentUser = await getCurrentUser();
 
     if (!ticket){
         notFound();
     }
     logEvent('Viewing ticket details', 'ticket', {ticketId: ticket.id}, 'info');
 
+            if (!currentUser || currentUser.id !== ticket?.userId ){
+            redirect('/login')
+        }
+
     return (
+
         <div className="min-h-screen bg-blue-50 p-8">
             <div className="max-w-2xl mx-auto bg-white rounded-lg shadow border border-gray-200 p-8 space-y-6">
                 <h1 className="text-3xl font-bold text-blue-600">
@@ -51,7 +59,12 @@ const TicketDetailsPage = async (props: {
                 >
                     Back to Tickets
                 </Link>
+                { ticket.status !== 'Closed' && (
+                    <CloseTicketButton ticketId={ticket.id} isClosed={ticket.status === 'Closed'}/>
+                )}
             </div>
+            {/* <div>Ticket ID: {ticket.userId}</div>
+            <div>User ID: {currentUser ? currentUser.id : "Null"}</div> */}
         </div>
     );
 }
